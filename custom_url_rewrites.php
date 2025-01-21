@@ -107,6 +107,36 @@ add_filter('wpseo_sitemap_page_content', function ($content) {
     return $content;
 });
 
+
+add_filter('pre_set_site_transient_update_plugins', function ($transient) {
+    if (empty($transient->checked)) {
+        return $transient;
+    }
+
+    $plugin_slug = 'custom_url_rewrites/custom_url_rewrites.php'; 
+    $update_url = 'https://web-mech.net/plugins/custom_url_rewrites.json'; 
+
+    // Fetch update data from custom endpoint
+    $response = wp_remote_get($update_url);
+
+    if (is_wp_error($response)) {
+        return $transient; // Return if there is an error
+    }
+
+    $update_data = json_decode(wp_remote_retrieve_body($response));
+
+    if (!empty($update_data) && version_compare($update_data->new_version, $transient->checked[$plugin_slug], '>')) {
+        $transient->response[$plugin_slug] = (object) [
+            'slug' => $plugin_slug,
+            'new_version' => $update_data->new_version,
+            'url' => $update_data->url,
+            'package' => $update_data->package,
+        ];
+    }
+
+    return $transient;
+});
+
 /**
  * Flush rewrite rules on plugin activation.
  */
